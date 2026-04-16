@@ -302,6 +302,24 @@
             <h3>Phenomenon Types</h3>
             <button class="btn btn-primary" onclick="showPhenomenonTypeForm()">Add Phenomenon Type</button>
             <div id="phenomenon-types-list"></div>
+
+            <h3>Phenomena</h3>
+            <div class="card">
+                <div class="form-group">
+                    <label for="phenomenonTypeSelectCatalogue">Qualitative Phenomenon Type</label>
+                    <select id="phenomenonTypeSelectCatalogue" onchange="loadPhenomenaForSelectedTypeCatalogue()">
+                        <option value="">Select a qualitative type...</option>
+                    </select>
+                </div>
+                <form onsubmit="createPhenomenonFromCatalogue(event)">
+                    <div class="form-group">
+                        <label for="newPhenomenonNameCatalogue">New Concrete Phenomenon Name</label>
+                        <input type="text" id="newPhenomenonNameCatalogue" placeholder="e.g., BloodTypeA" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Phenomenon</button>
+                </form>
+                <div id="selected-phenomena-list-catalogue"></div>
+            </div>
             
             <h3>Protocols</h3>
             <button class="btn btn-primary" onclick="showProtocolForm()">Add Protocol</button>
@@ -322,6 +340,94 @@
 
     <script>
         const API_BASE = 'https://patient-tracking-part1.onrender.com/api';
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function updateQualitativeTypeDropdownCatalogue(phenomenonTypes) {
+            const select = document.getElementById('phenomenonTypeSelectCatalogue');
+            const previousValue = select.value;
+            const qualitativeTypes = phenomenonTypes.filter(pt => pt.kind === 'QUALITATIVE');
+
+            select.innerHTML = '<option value="">Select a qualitative type...</option>';
+
+            qualitativeTypes.forEach(pt => {
+                const option = document.createElement('option');
+                option.value = String(pt.id);
+                option.textContent = pt.name;
+                select.appendChild(option);
+            });
+
+            if (qualitativeTypes.some(pt => String(pt.id) === previousValue)) {
+                select.value = previousValue;
+            }
+
+            loadPhenomenaForSelectedTypeCatalogue();
+        }
+
+        function loadPhenomenaForSelectedTypeCatalogue() {
+            const typeId = document.getElementById('phenomenonTypeSelectCatalogue').value;
+            const container = document.getElementById('selected-phenomena-list-catalogue');
+
+            if (!typeId) {
+                container.innerHTML = '<p>Select a qualitative type to view its concrete phenomena.</p>';
+                return;
+            }
+
+            container.innerHTML = '<p>Loading...</p>';
+
+            fetch(`${API_BASE}/phenomenon-types/${typeId}/phenomena`)
+                .then(r => r.ok ? r.json() : Promise.reject(new Error('Failed to load phenomena')))
+                .then(phenomena => {
+                    if (!phenomena || phenomena.length === 0) {
+                        container.innerHTML = '<p>No concrete phenomena for this type yet.</p>';
+                        return;
+                    }
+
+                    container.innerHTML = phenomena.map(p => `
+                        <div class="list-item">
+                            <p><strong>${escapeHtml(p.name)}</strong></p>
+                            <p>ID: ${p.id}</p>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => {
+                    container.innerHTML = '<p>Could not load phenomena.</p>';
+                    alert('Error loading phenomena: ' + error.message);
+                });
+        }
+
+        function createPhenomenonFromCatalogue(event) {
+            event.preventDefault();
+
+            const typeId = document.getElementById('phenomenonTypeSelectCatalogue').value;
+            const nameInput = document.getElementById('newPhenomenonNameCatalogue');
+            const name = nameInput.value.trim();
+
+            if (!typeId) {
+                alert('Select a qualitative phenomenon type first.');
+                return;
+            }
+
+            fetch(`${API_BASE}/phenomenon-types/${typeId}/phenomena`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            })
+                .then(r => r.ok ? r.json() : Promise.reject(new Error('Failed to create phenomenon')))
+                .then(() => {
+                    nameInput.value = '';
+                    loadPhenomenaForSelectedTypeCatalogue();
+                    alert('Phenomenon created');
+                })
+                .catch(error => alert('Error creating phenomenon: ' + error.message));
+        }
 
         function switchSection(sectionId) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -840,6 +946,7 @@
                         </div>
                     </div>
                 `).join('');
+                updateQualitativeTypeDropdownCatalogue(phenomenonTypes);
                 
                 const prResponse = await fetch(`${API_BASE}/protocols`);
                 const protocols = await prResponse.json();
