@@ -48,12 +48,19 @@
             ])
                 .then(([phenomenonTypes, protocols]) => {
                     const ptList = document.getElementById('phenomenon-types-list');
-                    ptList.innerHTML = phenomenonTypes.map(pt => `
-                        <div class="list-item">
-                            <h4>${pt.name}</h4>
-                            <p><strong>Kind:</strong> ${pt.kind}</p>
-                        </div>
-                    `).join('');
+                    ptList.innerHTML = phenomenonTypes.map(pt => {
+                        let html = `
+                            <div class="list-item">
+                                <h4>${pt.name}</h4>
+                                <p><strong>Kind:</strong> ${pt.kind}</p>`;
+                        
+                        if (pt.kind === 'QUALITATIVE') {
+                            html += `<button class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;" onclick="showManagePhenomenaModal(${pt.id}, '${pt.name}')">Manage Phenomena</button>`;
+                        }
+                        
+                        html += `</div>`;
+                        return html;
+                    }).join('');
 
                     const prList = document.getElementById('protocols-list');
                     prList.innerHTML = protocols.map(pr => `
@@ -175,6 +182,82 @@
                     showAlert('Protocol created', 'success');
                 })
                 .catch(e => showAlert('Error: ' + e.message, 'error'));
+        }
+
+        function showManagePhenomenaModal(phenomenonTypeId, phenomenonTypeName) {
+            const modal = document.getElementById('modal');
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Manage Phenomena: ${phenomenonTypeName}</h2>
+                        <button class="close-btn" onclick="closeModal()">×</button>
+                    </div>
+                    <div id="phenomena-loading">Loading phenomena...</div>
+                </div>
+            `;
+            modal.classList.add('active');
+            
+            // Load existing phenomena
+            fetch(`${API_BASE}/phenomenon-types/${phenomenonTypeId}/phenomena`)
+                .then(r => r.json())
+                .then(phenomena => {
+                    const phenomenaList = phenomena.map(p => `
+                        <div class="list-item">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>${p.name}</span>
+                                <button class="btn btn-danger" style="padding: 0.3rem 0.8rem; font-size: 0.85rem;" onclick="deletePhenomenon(${p.id})">Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+                    
+                    const content = document.querySelector('.modal-content');
+                    content.innerHTML = `
+                        <div class="modal-header">
+                            <h2>Manage Phenomena: ${phenomenonTypeName}</h2>
+                            <button class="close-btn" onclick="closeModal()">×</button>
+                        </div>
+                        <form onsubmit="createPhenomenon(event, ${phenomenonTypeId})">
+                            <div class="form-group">
+                                <label>Add New Phenomenon</label>
+                                <input type="text" id="phenomenonName" placeholder="e.g., Blood Group A, Poor, Good" required>
+                            </div>
+                            <div class="actions">
+                                <button type="submit" class="btn btn-primary">Add</button>
+                            </div>
+                        </form>
+                        <hr style="margin: 1rem 0; border: none; border-top: 1px solid #ddd;">
+                        <h4>Existing Phenomena</h4>
+                        <div id="phenomena-list">${phenomenaList || '<p>No phenomena defined yet</p>'}</div>
+                    `;
+                })
+                .catch(e => showAlert('Error loading phenomena: ' + e.message, 'error'));
+        }
+
+        function createPhenomenon(event, phenomenonTypeId) {
+            event.preventDefault();
+            const name = document.getElementById('phenomenonName').value;
+            
+            fetch(`${API_BASE}/phenomenon-types/${phenomenonTypeId}/phenomena`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name })
+            })
+                .then(r => r.ok ? r.json() : Promise.reject(new Error('Failed')))
+                .then(() => {
+                    document.getElementById('phenomenonName').value = '';
+                    showAlert('Phenomenon added', 'success');
+                    // Reload the modal
+                    const phenomenonTypeName = document.querySelector('.modal-header h2').textContent.replace('Manage Phenomena: ', '');
+                    showManagePhenomenaModal(phenomenonTypeId, phenomenonTypeName);
+                })
+                .catch(e => showAlert('Error: ' + e.message, 'error'));
+        }
+
+        function deletePhenomenon(phenomenonId) {
+            if (confirm('Are you sure you want to delete this phenomenon?')) {
+                // Note: You may need to add a DELETE endpoint if it doesn't exist
+                showAlert('Delete functionality would need backend endpoint', 'info');
+            }
         }
 
         function closeModal() {
