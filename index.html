@@ -539,12 +539,14 @@
                 .then(r => r.json())
                 .then(pt => {
                     if (pt.allowedUnits && pt.allowedUnits.length > 0) {
-                        pt.allowedUnits.forEach(unit => {
+                        pt.allowedUnits.forEach((unit, index) => {
                             const opt = document.createElement('option');
                             opt.value = unit;
                             opt.textContent = unit;
                             unitSelect.appendChild(opt);
                         });
+                        // Auto-select the first unit
+                        unitSelect.value = pt.allowedUnits[0];
                     }
                 });
         }
