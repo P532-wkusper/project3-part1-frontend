@@ -1112,10 +1112,17 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="ruleProductConcept">Then Infer (Result Phenomenon Type)</label>
-                            <select id="ruleProductConcept" required>
+                            <label for="ruleProductConceptType">Then Infer - Select Phenomenon Type</label>
+                            <select id="ruleProductConceptType" onchange="updateProductPhenomenaDropdown()" required>
                                 <option value="">Select phenomenon type...</option>
                                 ${phenomenonTypes.map(pt => `<option value="${pt.id}">${escapeHtml(pt.name)}</option>`).join('')}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ruleProductConcept">Then Infer - Select Specific Phenomenon</label>
+                            <select id="ruleProductConcept" required>
+                                <option value="">First select a phenomenon type...</option>
                             </select>
                         </div>
 
@@ -1226,6 +1233,31 @@
             operatorSelect.value = '';
         }
 
+        function updateProductPhenomenaDropdown() {
+            const typeId = document.getElementById('ruleProductConceptType').value;
+            const phenomenaSelect = document.getElementById('ruleProductConcept');
+            
+            if (!typeId) {
+                phenomenaSelect.innerHTML = '<option value="">First select a phenomenon type...</option>';
+                return;
+            }
+            
+            phenomenaSelect.innerHTML = '<option value="">Loading...</option>';
+            
+            fetch(`${API_BASE}/phenomenon-types/${typeId}/phenomena`)
+                .then(r => r.json())
+                .then(phenomena => {
+                    if (!phenomena || phenomena.length === 0) {
+                        phenomenaSelect.innerHTML = '<option value="">No phenomena defined for this type</option>';
+                        return;
+                    }
+                    phenomenaSelect.innerHTML = phenomena.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+                })
+                .catch(e => {
+                    phenomenaSelect.innerHTML = '<option value="">Error loading phenomena</option>';
+                });
+        }
+
         function createRule(event) {
             event.preventDefault();
             
@@ -1251,6 +1283,11 @@
             
             if (conditions.length === 0) {
                 showAlert('Add at least one condition', 'error');
+                return;
+            }
+            
+            if (!productConceptId) {
+                showAlert('Select a phenomenon to infer', 'error');
                 return;
             }
             
@@ -1295,10 +1332,17 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="ruleProductConcept">Then Infer (Result Phenomenon Type)</label>
-                            <select id="ruleProductConcept" required>
+                            <label for="ruleProductConceptType">Then Infer - Select Phenomenon Type</label>
+                            <select id="ruleProductConceptType" onchange="updateProductPhenomenaDropdown()" required>
                                 <option value="">Select phenomenon type...</option>
-                                ${phenomenonTypes.map(pt => `<option value="${pt.id}" ${pt.id == rule.productConceptId ? 'selected' : ''}>${escapeHtml(pt.name)}</option>`).join('')}
+                                ${phenomenonTypes.map(pt => `<option value="${pt.id}">${escapeHtml(pt.name)}</option>`).join('')}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ruleProductConcept">Then Infer - Select Specific Phenomenon</label>
+                            <select id="ruleProductConcept" required>
+                                <option value="">First select a phenomenon type...</option>
                             </select>
                         </div>
 
@@ -1316,6 +1360,28 @@
                 </div>
             `;
             modal.classList.add('active');
+            
+            // Load phenomena for the currently selected phenomenon type
+            // We need to figure out which type the product concept belongs to
+            const productConceptId = rule.productConceptId;
+            let phenomTypeId = null;
+            
+            // Find which phenomenon type this product concept belongs to by checking all types
+            for (const pt of phenomenonTypes) {
+                const phenomena = await fetch(`${API_BASE}/phenomenon-types/${pt.id}/phenomena`).then(r => r.json()).catch(() => []);
+                if (phenomena.some(p => p.id == productConceptId)) {
+                    phenomTypeId = pt.id;
+                    break;
+                }
+            }
+            
+            if (phenomTypeId) {
+                document.getElementById('ruleProductConceptType').value = phenomTypeId;
+                
+                const phenomena = await fetch(`${API_BASE}/phenomenon-types/${phenomTypeId}/phenomena`).then(r => r.json());
+                const phenomenaSelect = document.getElementById('ruleProductConcept');
+                phenomenaSelect.innerHTML = phenomena.map(p => `<option value="${p.id}" ${p.id == productConceptId ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('');
+            }
             
             // Load existing conditions
             const container = document.getElementById('conditions-container');
