@@ -605,13 +605,11 @@
                     </form>
                 </div>
             `;
-            
-            // Populate phenomenon types dropdown
             fetch(`${API_BASE}/phenomenon-types`)
                 .then(r => r.json())
                 .then(types => {
                     const select = document.getElementById('phenomenonTypeId');
-                    types.forEach(t => {
+                    types.filter(t => t.kind === 'QUANTITATIVE').forEach(t => {
                         const opt = document.createElement('option');
                         opt.value = t.id;
                         opt.textContent = t.name;
