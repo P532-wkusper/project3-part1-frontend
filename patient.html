@@ -63,8 +63,10 @@
 
                     list.innerHTML = observations.map(o => {
                         let typeDisplay = 'Unknown';
+                        console.log('Observation object:', o);
+                        console.log('Has phenomenonType?', o.phenomenonType);
+                        console.log('Has phenomenon?', o.phenomenon);
                         
-                        // Try to get phenomenon type name from either direct or nested structure
                         if (o.phenomenonType && o.phenomenonType.name) {
                             typeDisplay = o.phenomenonType.name;
                         } else if (o.phenomenon && o.phenomenon.phenomenonType && o.phenomenon.phenomenonType.name) {
