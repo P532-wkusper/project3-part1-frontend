@@ -64,23 +64,13 @@
                     list.innerHTML = observations.map(o => {
                         let typeDisplay = 'Unknown';
                         
-                        try {
-                            // Try direct phenomenonType (Measurement)
-                            if (o.phenomenonType) {
-                                if (o.phenomenonType.name) {
-                                    typeDisplay = o.phenomenonType.name;
-                                }
-                            }
-                            // Try nested phenomenonType (CategoryObservation)
-                            else if (o.phenomenon) {
-                                if (o.phenomenon.phenomenonType) {
-                                    if (o.phenomenon.phenomenonType.name) {
-                                        typeDisplay = o.phenomenon.phenomenonType.name;
-                                    }
-                                }
-                            }
-                        } catch (e) {
-                            typeDisplay = 'Error: ' + e.message;
+                        // Check nested phenomenon.phenomenonType first (CategoryObservation)
+                        if (o.phenomenon && o.phenomenon.phenomenonType && o.phenomenon.phenomenonType.name) {
+                            typeDisplay = o.phenomenon.phenomenonType.name;
+                        }
+                        // Then check direct phenomenonType (Measurement)
+                        else if (o.phenomenonType && o.phenomenonType.name) {
+                            typeDisplay = o.phenomenonType.name;
                         }
                         
                         return `
