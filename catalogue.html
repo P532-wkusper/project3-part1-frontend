@@ -168,11 +168,12 @@
                     ptList.innerHTML = phenomenonTypes.map(pt => {
                         let html = `
                             <div class="list-item">
-                                <h4>${pt.name}</h4>
+                                <h4>${escapeHtml(pt.name)}</h4>
                                 <p><strong>Kind:</strong> ${pt.kind}</p>`;
                         
                         if (pt.kind === 'QUALITATIVE') {
-                            html += `<button class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;" onclick="showManagePhenomenaModal(${pt.id}, '${pt.name}')">Manage Phenomena</button>`;
+                            const escapedName = pt.name.replace(/'/g, "\\'").replace(/"/g, '\\"');
+                            html += `<button class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;" onclick="showManagePhenomenaModal(${pt.id}, '${escapedName}')">Manage Phenomena</button>`;
                         }
                         
                         html += `</div>`;
