@@ -78,6 +78,7 @@
                                 ${o.unit ? `<p><strong>Unit:</strong> ${o.unit}</p>` : ''}
                                 <p><strong>Recorded:</strong> ${new Date(o.recordingTime).toLocaleString()}</p>
                                 <p><strong>Status:</strong> <span class="status-${o.status.toLowerCase()}">${o.status}</span></p>
+                                ${o.rejectionReason ? `<p><strong>Reason:</strong> ${o.rejectionReason}</p>` : ''}
                                 ${o.status === 'ACTIVE' ? `<button class="btn btn-danger" onclick="rejectObservation(${o.id})">Reject</button>` : ''}
                             </div>
                         `;
@@ -209,7 +210,7 @@
             const reason = prompt('Enter rejection reason:');
             if (!reason) return;
 
-            const data = { observationId: obsId, reason: reason };
+            const data = { observationId: obsId, rejectionReason: reason };
             fetch(`${API_BASE}/observations/${obsId}/reject`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

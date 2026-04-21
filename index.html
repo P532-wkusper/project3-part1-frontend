@@ -205,6 +205,22 @@
             margin-bottom: 0.5rem;
         }
 
+        .list-item.rejected {
+            border-left-color: #e74c3c;
+            opacity: 0.75;
+        }
+
+        .status-active {
+            color: #27ae60;
+            font-weight: 600;
+        }
+
+        .status-rejected {
+            color: #e74c3c;
+            font-weight: 600;
+            text-decoration: line-through;
+        }
+
         .error {
             color: #e74c3c;
             padding: 0.8rem;
@@ -541,12 +557,14 @@
             const modal = document.getElementById('modal');
             const obsHtml = observations.length > 0 
                 ? observations.map(o => `
-                    <div class="list-item">
+                    <div class="list-item ${o.status === 'REJECTED' ? 'rejected' : ''}">
                         <p><strong>Type:</strong> ${o.phenomenon?.phenomenonType?.name ?? o.type ?? 'Unknown'}</p>
                         <p><strong>Phenomenon:</strong> ${o.phenomenon?.name ?? 'N/A'}</p>
                         <p><strong>Value:</strong> ${o.amount || o.presence || 'N/A'}</p>
                         <p><strong>Recorded:</strong> ${o.recordingTime}</p>
-                        <p><strong>Status:</strong> ${o.status}</p>
+                        <p><strong>Status:</strong> <span class="status-${o.status.toLowerCase()}">${o.status}</span></p>
+                        ${o.rejectionReason ? `<p><strong>Reason:</strong> ${o.rejectionReason}</p>` : ''}
+                        ${o.status === 'ACTIVE' ? `<button class="btn btn-danger" onclick="rejectObservation(${o.id}, ${patient.id})">Reject</button>` : ''}
                     </div>
                 `).join('')
                 : '<p>No observations</p>';
@@ -571,6 +589,20 @@
                 </div>
             `;
             modal.classList.add('active');
+        }
+
+        function rejectObservation(observationId, patientId) {
+            const reason = prompt('Enter rejection reason:');
+            if (!reason) return;
+
+            fetch(`${API_BASE}/observations/${observationId}/reject`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ observationId, rejectionReason: reason })
+            })
+                .then(r => r.ok ? r.json() : Promise.reject(new Error('Failed to reject observation')))
+                .then(() => viewPatient(patientId))
+                .catch(error => console.error('Error rejecting observation:', error));
         }
 
         function showRecordMeasurementForm(patientId) {
